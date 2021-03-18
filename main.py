@@ -5,7 +5,7 @@ import os
 import discord
 import random
 
-from command import AdminCommand, RoleplayCommand, SingleOwnerPermission
+from command import AdminCommand, RoleplayCommand, SingleOwnerPermission, GMPermission, GMCommand
 
 class DiscordWrapper(discord.Client):
   def __init__(self):
@@ -34,8 +34,14 @@ class DiscordWrapper(discord.Client):
       await self.close()
       return
 
+    gm_perm = await GMPermission.create(message.channel)
+
+    m = GMCommand(r"/gm_check", permission = gm_perm).match(message)
+    if m:
+      await message.channel.send("You are the master of this channel!")
+
     m = RoleplayCommand(r"[^/]*"
-                        r"/(?:roll|dice)? *"
+                        r"/(?:roll +|dice +)?"
                         r"([0-9]*)d([0-9]+) *"
                         r"([0-9]*)(\+|\-)? *").match(message)
     if m:
@@ -47,7 +53,7 @@ class DiscordWrapper(discord.Client):
       if num in range(1, 11) and size in range(2, 101):
         sum = 0
         rolls = []
-        for i in range(1, num+1):
+        for i in range(0, num):
           r = random.randrange(0, size) + 1
           sum += r
           rolls.append(r)
@@ -61,7 +67,7 @@ class DiscordWrapper(discord.Client):
       print("Roll: ", num, size, threshold)
       
     m = RoleplayCommand(r"[^/]*"
-                        r"/(?:choose|pick)? *"
+                        r"/(?:choose +|pick +)"
                         r"\{ *([^\};]+;[^\}]+) *\} *").match(message)
     if m:
       variants = list(map(str.strip, m.get_str().split(";")))

@@ -1,6 +1,6 @@
 import re
 
-class REMatcher(object):
+class RegexMatcher(object):
   def __init__(self, matchstring):
     self.matchstring = matchstring
 
