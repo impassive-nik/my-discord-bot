@@ -1,5 +1,5 @@
-from regex import RegexMatcher
-from permission import Permission, SingleOwnerPermission, GMPermission
+from .regex import RegexMatcher
+from .permission import Permission, SingleOwnerPermission, GMPermission
 
 class Command:
   def __init__(self, regex):
