@@ -1,13 +1,50 @@
 import discord
 import random
+import os
+import threading
+import asyncio
 
 from .command import AdminCommand, RoleplayCommand, Permission, GMPermission, GMCommand
 
 class DiscordWrapper(discord.Client):
-  def __init__(self, admin : Permission = None):
+  def __init__(self, admin : Permission = None, pipe : str = None):
     super(DiscordWrapper, self).__init__()
     self.admin = admin
+    self.admin_user = None
     self.reboot_flag = False
+
+    self.pipe_file = pipe
+    self.pipe_thread = None
+
+    if self.pipe_file is not None:
+      self.pipe_thread = threading.Thread(target=self.pipe_responder)
+      self.pipe_thread.daemon = True
+      self.pipe_thread.start()
+  
+  def pipe_responder(self):
+      if os.path.exists(self.pipe_file):
+        os.unlink(self.pipe_file)
+      os.mkfifo(self.pipe_file)
+
+      while True:
+        with open(self.pipe_file) as fifo:
+          while True:
+            data = fifo.read()
+            if len(data) == 0:
+              break
+            #print('Read: "{0}"'.format(data))
+            self.loop.create_task(self.inform_admin(str(data)))
+  
+  async def inform_admin(self, message : str):
+    if self.admin_user is None:
+      if self.admin is None:
+        return
+      self.admin_user = await self.fetch_user(self.admin.user_id)
+    
+    if self.admin_user.dm_channel is None:
+      await self.admin_user.create_dm()
+
+    await self.admin_user.dm_channel.send(message)
 
   async def on_ready(self):
     print("Ready! ")
@@ -69,5 +106,5 @@ class DiscordWrapper(discord.Client):
     if m:
       variants = list(map(str.strip, m.get_str().split(";")))
       if len(variants) > 1:
-        chosen = variants[random.randrange(0, len(variants) + 1)]
+        chosen = variants[random.randrange(0, len(variants))]
         await message.channel.send("**" + chosen + "**  ||из " + str(len(variants)) + " вариантов||")
